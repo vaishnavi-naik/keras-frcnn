@@ -16,7 +16,7 @@ epsilon = 1e-4
 
 def rpn_loss_regr(num_anchors):
 	def rpn_loss_regr_fixed_num(y_true, y_pred):
-		if K.common.image_dim_ordering() == 'th':
+		if K.backend() == 'theano':
 			x = y_true[:, 4 * num_anchors:, :, :] - y_pred
 			x_abs = K.abs(x)
 			x_bool = K.less_equal(x_abs, 1.0)
@@ -35,7 +35,10 @@ def rpn_loss_regr(num_anchors):
 
 def rpn_loss_cls(num_anchors):
 	def rpn_loss_cls_fixed_num(y_true, y_pred):
-		if K.common.image_dim_ordering() == 'tf':
+		if K.backend() == 'tensorflow':
+			print("==============")
+			print(y_true.shape, y_pred.shape)
+			print(y_true[:, :, :, num_anchors:].shape, y_pred[:, :, :, :].shape)
 			return lambda_rpn_class * K.sum(y_true[:, :, :, :num_anchors] * K.binary_crossentropy(y_pred[:, :, :, :], y_true[:, :, :, num_anchors:])) / K.sum(epsilon + y_true[:, :, :, :num_anchors])
 		else:
 			return lambda_rpn_class * K.sum(y_true[:, :num_anchors, :, :] * K.binary_crossentropy(y_pred[:, :, :, :], y_true[:, num_anchors:, :, :])) / K.sum(epsilon + y_true[:, :num_anchors, :, :])

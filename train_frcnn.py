@@ -7,6 +7,8 @@ import numpy as np
 from optparse import OptionParser
 import pickle
 import re
+import traceback
+import os 
 
 from tensorflow.keras import backend as K
 from tensorflow.keras.optimizers import Adam, SGD, RMSprop
@@ -113,7 +115,7 @@ num_imgs = len(train_imgs)
 print(f'Num train samples {len(train_imgs)}')
 print(f'Num val samples {len(val_imgs)}')
 
-
+data_gen_train = data_generators.get_anchor_gt(train_imgs, classes_count, C, nn.get_img_output_length, K.image_data_format(), mode='train')
 data_gen_val = data_generators.get_anchor_gt(val_imgs, classes_count, C, nn.get_img_output_length,K.image_data_format(), mode='val')
 
 if K.image_data_format() == 'th':
@@ -133,7 +135,7 @@ num_anchors = len(C.anchor_box_scales) * len(C.anchor_box_ratios)
 rpn = nn.rpn(shared_layers, num_anchors)
 
 classifier = nn.classifier(shared_layers, roi_input, C.num_rois, nb_classes=len(classes_count), trainable=True)
-
+print("Rpn:", rpn, "output:", rpn[:2])
 model_rpn = Model(img_input, rpn[:2])
 model_classifier = Model([img_input, roi_input], classifier)
 
@@ -143,7 +145,7 @@ model_all = Model([img_input, roi_input], rpn[:2] + classifier)
 
 
 try:
-	print('loading weights from {C.base_net_weights}')    
+	print('loading weights from {C.base_net_weights}', C.base_net_weights, os.getcwd())    
 	model_rpn.load_weights(C.base_net_weights, by_name=True)
 	model_classifier.load_weights(C.base_net_weights, by_name=True)
 except:
@@ -156,7 +158,9 @@ model_rpn.compile(optimizer=optimizer, loss=[losses.rpn_loss_cls(num_anchors), l
 model_classifier.compile(optimizer=optimizer_classifier, loss=[losses.class_loss_cls, losses.class_loss_regr(len(classes_count)-1)], metrics={f'dense_class_{len(classes_count)}': 'accuracy'})
 model_all.compile(optimizer='sgd', loss='mae')
 
-epoch_length = 1000
+print(model_all.summary())
+# epoch_length = 1000
+epoch_length = 3
 num_epochs = int(options.num_epochs)
 iter_num = 0
 
@@ -188,8 +192,9 @@ for epoch_num in range(num_epochs):
 					print('RPN is not producing bounding boxes that overlap the ground truth boxes. Check RPN settings or keep training.')
 
 			X, Y, img_data = next(data_gen_train)
-
+			print("Training batch", X[0].shape, Y[0].shape)
 			loss_rpn = model_rpn.train_on_batch(X, Y)
+			print("Train done")
 
 			P_rpn = model_rpn.predict_on_batch(X)
 
@@ -285,6 +290,7 @@ for epoch_num in range(num_epochs):
 
 		except Exception as e:
 			print(f'Exception: {e}')
+			print(traceback.format_exc())
 			continue
 
 print('Training complete, exiting.')

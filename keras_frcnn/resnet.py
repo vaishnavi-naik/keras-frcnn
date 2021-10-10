@@ -18,19 +18,8 @@ from keras_frcnn.FixedBatchNormalization import FixedBatchNormalization
 from tensorflow.keras.utils import get_file
 
 def get_weight_path():
-    if K.image_data_format == 'channels_last':
-#         return 'resnet50_weights_th_dim_ordering_th_kernels_notop.h5'
-#     else:
-        BASE_WEIGHTS_PATH = 'https://storage.googleapis.com/tensorflow/keras-applications/resnet/'
-
-        file_name = 'resnet50_weights_tf_dim_ordering_tf_kernels_notop.g5'
-        file_hash = WEIGHTS_HASHES[model_name][1]
-        weights_path = get_file(file_name, 
-                                           BASE_WEIGHTS_PATH + file_name,
-                                           cache_subdir='models',
-                                           file_hash='4d473c1dd8becc155b73f8504c6f6626')
-    #         model.load_weights(weights_path)
-        return weights_path
+    if K.image_data_format() == 'channels_last':
+        return 'resnet50_weights_tf_dim_ordering_tf_kernels_notop.h5'
 
 def get_img_output_length(width, height):
     def get_output_length(input_length):
